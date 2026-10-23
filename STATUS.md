@@ -165,3 +165,12 @@ User melaporkan v2.4 TETAP tidak memunculkan keyboard saat start. Diagnosis: MIU
 flutter analyze bersih; build sukses 2,6 menit (Kotlin terkompilasi).
 
 APK v2.5: ~/workspace/your_files/PronounceIt-v25-arm64.apk = 32.738.469 B, SHA256 814f5c4fc1c11a24fa16667e959b6968abc8b43b9d62444f2181f16789bfc50b, versionCode 2006. Link: https://muse.ai/files/1397741110080420/1874862387289016/rvglgtf2jcma9y09ew1i5uri/PronounceIt-v25-arm64.apk (kedaluwarsa 2026-10-25 18:38 WIB). Fix di-commit lokal. Diagnostik cadangan bila masih gagal: tanya user apakah kursor berkedip di kolom pencarian (fokus dapat tapi IME diblokir vs fokus gagal total).
+
+
+## PEKERJAAN 11 — v2.5 gagal juga; diagnosis kursor -> retry-loop native v2.6 (2026-10-23 18:44–18:52 WIB)
+
+User melaporkan v2.5 tetap gagal DAN memberi data kunci: "kursor berkedip" — fokus Dart PASTI mendarat; yang dibuang MIUI adalah panggilan showSoftInput-nya (kemungkinan: target decorView bukan view input yang benar, dan/atau panggilan tunggal 400 ms jatuh sebelum koneksi text-input Flutter siap saat cold start).
+
+Fix v2.6 (1.2.0-beta+7): MainActivity.kt ditulis ulang jadi retry-loop — saat window focus: tiap 300 ms (maks 10x) panggil imm.showSoftInput(decorView.findFocus() ?: decorView, 0), berhenti begitu rootWindowInsets.isVisible(IME) == true. Manifest stateAlwaysVisible + retry Dart dipertahankan. Analyze bersih, build 1,7 menit.
+
+APK v2.6: ~/workspace/your_files/PronounceIt-v26-arm64.apk = 32.738.469 B, SHA256 17c4568c0b2809b9d2662b730d7f1a85afaff56772333a91f9e4f2c570ecce67, versionCode 2007. Link: https://muse.ai/files/1397741110080420/1755840639043990/zu32kq5q9sl8ktuazgfmjwg4/PronounceIt-v26-arm64.apk (kedaluwarsa 2026-10-25 18:52 WIB). Di-commit lokal. Menunggu tes user.
