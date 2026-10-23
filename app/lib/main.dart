@@ -1,0 +1,464 @@
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter_tts/flutter_tts.dart';
+import 'package:path/path.dart' as p;
+import 'package:sqflite/sqflite.dart';
+
+void main() {
+  runApp(const KamusApp());
+}
+
+// ---------- Model ----------
+
+class WordEntry {
+  final int id;
+  final String word;
+  final String? pos;
+  final String? definitionEn;
+  final String? example;
+  final String? ipaUs;
+  final String? ipaUk;
+  final String? ipaOther;
+  final String? glossId;
+  final String? syllables;
+  final int? syllableCount;
+  final int? stressIndex;
+  final int? freqRank;
+
+  const WordEntry({
+    required this.id,
+    required this.word,
+    this.pos,
+    this.definitionEn,
+    this.example,
+    this.ipaUs,
+    this.ipaUk,
+    this.ipaOther,
+    this.glossId,
+    this.syllables,
+    this.syllableCount,
+    this.stressIndex,
+    this.freqRank,
+  });
+
+  factory WordEntry.fromMap(Map<String, Object?> m) => WordEntry(
+        id: m['id'] as int,
+        word: m['word'] as String,
+        pos: m['pos'] as String?,
+        definitionEn: m['definition_en'] as String?,
+        example: m['example'] as String?,
+        ipaUs: m['ipa_us'] as String?,
+        ipaUk: m['ipa_uk'] as String?,
+        ipaOther: m['ipa_other'] as String?,
+        glossId: m['gloss_id'] as String?,
+        syllables: m['syllables'] as String?,
+        syllableCount: m['syllable_count'] as int?,
+        stressIndex: m['stress_index'] as int?,
+        freqRank: m['freq_rank'] as int?,
+      );
+}
+
+// ---------- Database ----------
+
+class KamusDb {
+  static Database? _db;
+
+  static Future<Database> instance() async {
+    if (_db != null) return _db!;
+    final dbDir = await getDatabasesPath();
+    // Versioned filename so a future dataset update is not shadowed by a stale copy.
+    final path = p.join(dbDir, 'kamus_v22.sqlite');
+    if (!await File(path).exists()) {
+      final data = await rootBundle.load('assets/kamus_v22.sqlite');
+      final bytes =
+          data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+      await File(path).writeAsBytes(bytes, flush: true);
+    }
+    _db = await openDatabase(path, readOnly: true);
+    return _db!;
+  }
+
+  static Future<List<WordEntry>> search(String query) async {
+    final db = await instance();
+    final q = query.trim().toLowerCase();
+    final List<Map<String, Object?>> rows;
+    if (q.isEmpty) {
+      rows = await db.query('words', orderBy: 'freq_rank ASC', limit: 100);
+    } else {
+      rows = await db.rawQuery(
+        'SELECT * FROM words WHERE word LIKE ? '
+        'ORDER BY (word LIKE ?) DESC, freq_rank ASC LIMIT 100',
+        ['%$q%', '$q%'],
+      );
+    }
+    return rows.map(WordEntry.fromMap).toList();
+  }
+}
+
+// ---------- TTS ----------
+
+class Speaker {
+  static final FlutterTts _tts = FlutterTts();
+  static bool _ready = false;
+
+  static Future<void> _init() async {
+    if (_ready) return;
+    await _tts.setLanguage('en-GB');
+    await _tts.setPitch(1.0);
+    _ready = true;
+  }
+
+  static Future<void> speak(String text, {required double rate}) async {
+    await _init();
+    await _tts.stop();
+    await _tts.setSpeechRate(rate);
+    await _tts.speak(text);
+  }
+
+  static Future<void> stop() async {
+    await _tts.stop();
+  }
+}
+
+// ---------- App ----------
+
+class KamusApp extends StatelessWidget {
+  const KamusApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'English Dictionary: Pronounce It!',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
+        useMaterial3: true,
+      ),
+      home: const HomePage(),
+    );
+  }
+}
+
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  final _controller = TextEditingController();
+  final _focusNode = FocusNode();
+  Future<List<WordEntry>> _results = KamusDb.search('');
+
+  void _onSearch(String value) {
+    setState(() {
+      _results = KamusDb.search(value);
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Pronounce It!',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.info_outline),
+            tooltip: 'About',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AboutPage()),
+              );
+            },
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: TextField(
+              controller: _controller,
+              focusNode: _focusNode,
+              autofocus: true,
+              onChanged: _onSearch,
+              decoration: InputDecoration(
+                hintText: 'Search a word…',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _controller.text.isEmpty
+                    ? null
+                    : IconButton(
+                        icon: const Icon(Icons.clear),
+                        tooltip: 'Clear',
+                        onPressed: () {
+                          _controller.clear();
+                          _onSearch('');
+                          _focusNode.requestFocus();
+                        },
+                      ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: FutureBuilder<List<WordEntry>>(
+              future: _results,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState != ConnectionState.done) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+                final words = snapshot.data ?? [];
+                if (words.isEmpty) {
+                  return const Center(child: Text('No words found.'));
+                }
+                return ListView.separated(
+                  itemCount: words.length,
+                  separatorBuilder: (context, index) =>
+                      const Divider(height: 1),
+                  itemBuilder: (context, i) {
+                    final w = words[i];
+                    final ipa = w.ipaUk ?? w.ipaOther ?? w.ipaUs;
+                    return ListTile(
+                      title: Text(w.word,
+                          style: const TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.w600)),
+                      subtitle: Text(
+                        [
+                          if (w.pos != null) w.pos!,
+                          if (ipa != null) '/$ipa/',
+                        ].join('  ·  '),
+                      ),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => DetailPage(entry: w),
+                          ),
+                        ).then((_) {
+                          // Back from a word: keyboard up, ready to search.
+                          if (mounted) _focusNode.requestFocus();
+                        });
+                      },
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------- Detail ----------
+
+class DetailPage extends StatefulWidget {
+  final WordEntry entry;
+  const DetailPage({super.key, required this.entry});
+
+  @override
+  State<DetailPage> createState() => _DetailPageState();
+}
+
+class _DetailPageState extends State<DetailPage> {
+  WordEntry get w => widget.entry;
+
+  @override
+  void dispose() {
+    Speaker.stop();
+    super.dispose();
+  }
+
+  Widget _syllableLine() {
+    final raw = w.syllables;
+    if (raw == null || raw.isEmpty) return const SizedBox.shrink();
+    final parts = raw.split('·');
+    final stressIdx = (w.stressIndex ?? 0) - 1; // stored 1-based
+    return RichText(
+      text: TextSpan(
+        style: const TextStyle(fontSize: 20, color: Colors.black87),
+        children: [
+          for (var i = 0; i < parts.length; i++) ...[
+            if (i > 0) const TextSpan(text: ' · '),
+            TextSpan(
+              text: parts[i],
+              style: TextStyle(
+                fontWeight:
+                    i == stressIdx ? FontWeight.bold : FontWeight.normal,
+                color: i == stressIdx
+                    ? Theme.of(context).colorScheme.primary
+                    : Colors.black87,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(w.word)),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(w.word,
+                style:
+                    const TextStyle(fontSize: 36, fontWeight: FontWeight.bold)),
+            if (w.pos != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(w.pos!,
+                    style: const TextStyle(
+                        fontSize: 16, fontStyle: FontStyle.italic)),
+              ),
+            const SizedBox(height: 16),
+            Builder(builder: (context) {
+              // One primary pronunciation only, UK first:
+              // UK -> untagged Wiktionary -> US (last resort). No mixing.
+              final primary = w.ipaUk ?? w.ipaOther ?? w.ipaUs;
+              if (primary == null) return const SizedBox.shrink();
+              final label = w.ipaUk != null
+                  ? 'IPA (UK)'
+                  : (w.ipaOther != null ? 'IPA' : 'IPA (US)');
+              return Text('$label:  /$primary/',
+                  style: const TextStyle(
+                      fontSize: 19, fontWeight: FontWeight.w600));
+            }),
+            const SizedBox(height: 8),
+            _syllableLine(),
+            if (w.syllableCount != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text('${w.syllableCount} syllable(s)',
+                    style: const TextStyle(color: Colors.grey)),
+              ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                FilledButton.icon(
+                  onPressed: () => Speaker.speak(w.word, rate: 0.5),
+                  icon: const Icon(Icons.volume_up),
+                  label: const Text('Listen'),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton.icon(
+                  onPressed: () => Speaker.speak(w.word, rate: 0.25),
+                  icon: const Icon(Icons.slow_motion_video),
+                  label: const Text('Slow'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            if (w.glossId != null && w.glossId!.isNotEmpty) ...[
+              const Text('Arti (Bahasa Indonesia)',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              Text(w.glossId!,
+                  style: const TextStyle(fontSize: 16, height: 1.4)),
+              const SizedBox(height: 20),
+            ],
+            const Text('Definition',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            Text(w.definitionEn ?? '-',
+                style: const TextStyle(fontSize: 16, height: 1.4)),
+            if (w.example != null && w.example!.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              const Text('Example',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              Text(w.example!,
+                  style: const TextStyle(
+                      fontSize: 16,
+                      height: 1.4,
+                      fontStyle: FontStyle.italic)),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () => Speaker.speak(w.example!, rate: 0.5),
+                icon: const Icon(Icons.volume_up),
+                label: const Text('Listen to example'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------- About ----------
+
+class AboutPage extends StatelessWidget {
+  const AboutPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('About')),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('English Dictionary: Pronounce It!',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            const Text('Version 1.2.0 - beta',
+                style: TextStyle(color: Colors.grey)),
+            const SizedBox(height: 24),
+            const Text(
+              'Proudly presented for the Four Pillars English Club '
+              'of Panca Bhakti Vocational High School',
+              style: TextStyle(
+                  fontSize: 16,
+                  height: 1.45,
+                  fontWeight: FontWeight.bold,
+                  fontStyle: FontStyle.italic),
+            ),
+            const SizedBox(height: 24),
+            const Text('Data sources (all open)',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            const Text(
+              'Pronunciations: English Wiktionary via Kaikki '
+              '(wiktextract), CC BY-SA. Indonesian meanings: English '
+              'Wiktionary translations (CC BY-SA) & WordNet Bahasa '
+              '(MIT). Definitions: Open English WordNet (via NLTK). '
+              'Syllables & stress: CMU Pronouncing Dictionary. '
+              'Frequency ranking: wordfreq.',
+              style: TextStyle(fontSize: 14, height: 1.45),
+            ),
+            const SizedBox(height: 32),
+            const Text('Developed by',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            const Text('Muhammad Abdul Aziz, S.Pd',
+                style: TextStyle(fontSize: 16)),
+          ],
+        ),
+      ),
+    );
+  }
+}

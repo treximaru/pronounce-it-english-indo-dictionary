@@ -1,0 +1,15 @@
+{
+  "total_rows": 91556,
+  "prototype_rows": 1000,
+  "new_rows": 90556,
+  "with_ipa_uk": 36725,
+  "with_ipa_uk_pct": 40.1,
+  "with_ipa_us": 53949,
+  "with_ipa_other": 54335,
+  "with_any_ipa": 91555,
+  "with_any_ipa_pct": 100.0,
+  "with_syllables": 33369,
+  "with_example": 61138,
+  "with_gloss_id": 10916,
+  "with_gloss_id_pct": 11.9
+}

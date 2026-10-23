@@ -1,0 +1,33 @@
+# Python pipeline
+.venv/
+__pycache__/
+*.pyc
+
+# Generated / downloaded data (regenerate via scripts, see README)
+data/*.jsonl
+data/*.sqlite
+data/corpora_zips/
+
+# Flutter
+app/.dart_tool/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/build/
+app/.packages
+app/.pub-cache/
+app/.pub/
+app/android/.gradle/
+app/android/local.properties
+app/ios/Flutter/Generated.xcconfig
+
+# Bundled database asset (copied from data/ at build time)
+app/assets/kamus_v22.sqlite
+
+# Release binaries (distributed via GitHub Releases instead)
+*.apk
+*.aab
+
+# Misc
+.DS_Store
+.idea/
+.vscode/

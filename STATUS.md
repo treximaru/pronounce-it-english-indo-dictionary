@@ -1,0 +1,137 @@
+# STATUS — Project Kamus Pronunciation APK
+**Update:** 23 Oktober 2026, sesi background (install toolchain + dataset prototype)
+**Arsitektur terkunci:** kamus English–English offline (SQLite di APK Flutter) + audio TTS bawaan HP Android en-GB. Sumber terbuka: Kaikki/Wiktionary + WordNet + CMUdict.
+
+---
+
+## PEKERJAAN 1 — Toolchain (SEMUA di `~/workspace/tools/`, tanpa sudo, tanpa install system) ✅ SELESAI
+
+### Yang terpasang & terverifikasi
+| Komponen | Bukti konkret |
+|---|---|
+| Java | OpenJDK Temurin **17.0.20.1** di `~/workspace/tools/android/jre17` (sudah ada sebelumnya, dipakai sebagai JAVA_HOME) |
+| Flutter SDK | **3.47.7 stable** — `flutter --version`: Framework rev `abaf9c5237` (2026-10-08), Engine `deb287481e`, **Dart 3.13.5**, DevTools 2.60.0. Di `~/workspace/tools/flutter` (2,5 GB terekstrak) |
+| Arsip Flutter | `flutter_linux_3.47.7-stable.tar.xz`, 1.504 MB, dari `storage.googleapis.com/flutter_infra_release` (URL diambil dari `releases_linux.json`). **SHA256 cocok** dengan metadata rilis resmi: `af7455f540df951184c7953fbe3cf884766e7541dacf8571f9f582db03dd6230` |
+| Android cmdline-tools | build **14742923** dari dl.google.com (zip 165 MB) → `~/workspace/tools/android-sdk/cmdline-tools/latest`, `sdkmanager --version` = **20.0** |
+| Paket SDK (output `sdkmanager --list_installed`) | `platform-tools` **37.0.1** (adb 1.0.41 / 37.0.1-15733141) · `platforms;android-35` rev 2 · `platforms;android-36` rev 2 · `build-tools;35.0.0` · `build-tools;28.0.3` — total SDK 464 MB |
+| Lisensi SDK | Diterima, 8 file di `~/workspace/tools/android-sdk/licenses/` |
+| Konfigurasi Flutter | `flutter config --android-sdk ~/workspace/tools/android-sdk` sudah dijalankan |
+
+### Hasil `flutter doctor`
+- Run ke-2 (setelah SDK dilengkapi): **`[✓] Android toolchain`** — SDK terdeteksi, lisensi accepted. Network resources ✓, Proxy Configuration ✓.
+- Kenapa ada android-36 + build-tools 28.0.3 padahal spek awal minta android-35/35.0.0: **doctor Flutter 3.47.7 secara eksplisit menuntut "Android SDK 36 and the Android BuildTools 28.0.3"**, jadi kedua paket itu ditambahkan di samping android-35 + build-tools 35.0.0 yang tetap terpasang.
+- Isu doctor yang tersisa (tidak relevan untuk target Android): flutter/dart belum di PATH (kosmetik), Chrome tidak ada (khusus web), toolchain Linux desktop tidak lengkap (khusus desktop). Doctor run pertama sangat lambat (~20 menit) karena cek "Network resources" timeout 4,5 menit lewat proxy; run kedua selesai 6 detik.
+
+### Kendala nyata yang ditemukan & solusinya (penting untuk sesi berikutnya)
+1. **sdkmanager (Java) tidak membaca env proxy** dan koneksinya lewat proxy selalu `SocketException: Connection reset` → manifest gagal diunduh ("Failed to find package 'platform-tools'"). **Fix yang terbukti:** paksa IPv4 + proxy lokal 8899:
+   ```
+   export JAVA_HOME=~/workspace/tools/android/jre17
+   export JAVA_TOOL_OPTIONS="-Djava.net.preferIPv4Stack=true"
+   sdkmanager --sdk_root=~/workspace/tools/android-sdk --proxy=http --proxy_host=127.0.0.1 --proxy_port=8899 "<paket>"
+   ```
+   Dengan kombinasi ini semua unduhan SDK berhasil (install 3 paket pertama selesai 52 detik).
+2. Ekstrak Flutter: `tar` exit code 2 **hanya** karena peringatan "Cannot change ownership to uid 1000" untuk ribuan file (arsip membawa uid 1000, proses berjalan sebagai root). Semua file terekstrak utuh sampai akhir — dibuktikan `flutter --version` dan doctor berjalan normal.
+3. **Catatan untuk tahap build APK nanti:** Java yang ada adalah **JRE** 17 (cukup untuk sdkmanager & doctor). Gradle/Kotlin saat compile APK umumnya butuh **JDK penuh (javac)** — bila build pertama gagal di titik itu, unduh Temurin JDK 17 ke `~/workspace/tools/` dengan pola yang sama.
+
+---
+
+## PEKERJAAN 2 — Dataset Prototype 1.000 Kata ✅ SELESAI
+
+**Output:** `~/workspace/projects/kamus-pronunciation/data/kamus_prototype.sqlite` (276 KB)
+**Script:** `~/workspace/projects/kamus-pronunciation/scripts/build_dataset.py` (bisa dijalankan ulang)
+**Venv:** `~/workspace/projects/kamus-pronunciation/.venv` — nltk **3.10.4**, wordfreq **3.1.1** (ftfy 6.3.1, langcodes 3.5.1, regex, msgpack ikut terpasang)
+
+### Jalur data yang berhasil
+- Frekuensi: wordfreq `top_n_list('en', 1500)` — catatan: wordfreq 3.x mengganti nama fungsi dari `top_n_word_list` menjadi `top_n_list`; script menangani keduanya.
+- Definisi + POS + contoh: NLTK WordNet. Fonem/syllable/stress: NLTK cmudict, ARPAbet→IPA dengan tabel mapping standar (AH→ʌ bila bertekanan / ə bila tidak, ER→ɝ/ɚ, dst.), stress primer ditandai ˈ dan sekunder ˌ pada IPA.
+- **Blocker NLTK yang diatasi:** `nltk.download()` gagal total di VM ini — (a) SSRF guard NLTK 3.10 menolak IP 198.18.x.x (range fake-IP DNS proxy), (b) cek "non-private directory" menolak direktori group-writable. **Solusi yang dipakai:** unduh zip corpus resmi pakai curl dari `raw.githubusercontent.com/nltk/nltk_data/gh-pages` (wordnet.zip 11 MB, omw-1.4.zip 26 MB, cmudict.zip 876 KB), ekstrak ke `/tmp/kamus_nltk/corpora` + `chmod -R go-w`, jalankan dengan `NLTK_DATA=/tmp/kamus_nltk`. Zip mentahnya diarsipkan di `data/corpora_zips/` untuk pembangunan ulang tanpa unduh lagi.
+
+### Hasil & verifikasi independen (query langsung ke SQLite)
+| Metrik | Angka |
+|---|---|
+| Total baris | **1.000** (distinct word = 1.000, semua punya definisi EN) |
+| Pemindaian pool | rank frekuensi 1–1129 dipindai untuk mendapat 1.000 valid; yang tersaring: 69 tanpa entri WordNet, 39 format non-huruf-murni (apostrof/strip), 21 terlalu pendek |
+| Punya contoh kalimat | **930 / 1.000 = 93,0%** |
+| Punya syllable + stress + IPA (US) | **998 / 1.000 = 99,8%** |
+| `ipa_uk` | NULL di semua baris — **sengaja**, untuk pengayaan Kaikki/Wiktionary tahap berikutnya (tidak dikarang) |
+| `gloss_id` | NULL di semua baris (sesuai spek prototype) |
+| Rentang freq_rank tersimpan | 5 – 1129 (rank 1–4: the/to/and/of memang tidak punya entri WordNet) |
+| Tabel ekstra | `words_fts` (FTS5) — pencarian teruji: MATCH 'learn' → `learn` |
+| Skema `words` | id, word, pos, definition_en, example, ipa_us, ipa_uk, syllables, syllable_count, stress_index, freq_rank, gloss_id |
+
+### Contoh baris lengkap (dari query verifikasi)
+| word | pos | definition_en | example | ipa_us | syllables | count | stress | rank |
+|---|---|---|---|---|---|---|---|---|
+| education | noun | the activities of educating or instructing; activities that impart knowledge or skill | he received no formal education | ˌɛdʒəˈkeɪʃən | ɛ·dʒə·keɪ·ʃən | 4 | 3 | 526 |
+| beautiful | adjective | delighting the senses or exciting intellectual or emotional admiration | a beautiful child | ˈbjutəfəl | bju·tə·fəl | 3 | 1 | 604 |
+| important | adjective | of great significance or value | important people | ɪmˈpɔrtənt | ɪm·pɔr·tənt | 3 | 2 | 347 |
+| school | noun | an educational institution | the school was founded in 1900 | ˈskul | skul | 1 | 1 | 188 |
+| learn | verb | gain knowledge or skills | She learned dancing from her sister | ˈlɝn | lɝn | 1 | 1 | 698 |
+
+Catatan jujur soal kata uji: **`pronunciation` dan `computer` TIDAK ada di dataset** — keduanya berada di luar 1.000 kata valid teratas menurut ranking wordfreq (computer baru muncul setelah rank 1129). Ini konsekuensi wajar daftar berbasis frekuensi; keduanya akan masuk saat dataset diperluas (pool diperbesar / tahap Kaikki).
+Kolom `syllables` berisi pecahan suku kata **fonetis (IPA)** hasil segmentasi fonem CMU (onset-maximization), bukan pecahan ejaan — konsisten dengan kolom IPA-nya.
+
+---
+
+## PEKERJAAN 3 — Scaffold App Flutter + Build APK ✅ SELESAI (23 Okt 2026, ~14:28 WIB)
+
+**Output:** `~/workspace/your_files/KamusPronunciation-prototype.apk` (48.612.397 byte / 48,6 MB, SHA256 `c49b4d50aca59043aecc377a3b88827da980479fb946a99b25b76e088751ca03`)
+**App:** `~/workspace/projects/kamus-pronunciation/app/` — package `com.kamus.kamus_pronunciation`, v1.0.0 (code 1), minSdk 24, targetSdk 36, ditandatangani debug key template (cukup untuk prototype).
+
+### Yang dibangun
+- `flutter create` + dependensi `flutter_tts` ^4.2.0, `sqflite` ^2.4.1, `path` ^1.9.1 (`flutter pub get` OK, `flutter analyze` bersih).
+- Dataset SQLite dibundle sebagai asset (`assets/kamus_prototype.sqlite`, 282.624 byte — ukuran identik dengan file sumber, terverifikasi di listing APK); saat run pertama disalin ke `kamus_prototype_v1.sqlite` di direktori DB aplikasi lalu dibuka read-only.
+- Layar Beranda: pencarian (prefix didahulukan, lalu freq_rank) + daftar kata. Layar Detail: word, POS, IPA (US) — `ipa_uk` ditampilkan hanya bila terisi (saat ini NULL), pecahan syllables dengan syllable ber-stress ditebalkan/di-highlight, definisi EN, contoh kalimat.
+- TTS: flutter_tts locale `en-GB` — tombol Listen (rate 0.5), Slow (rate 0.25), dan Listen to example (rate 0.5).
+
+### Kendala build nyata & solusinya (penting untuk sesi berikutnya)
+1. **JRE 17 tidak punya javac** → Gradle butuh JDK penuh. Diunduh **Temurin JDK 17.0.21** ke `~/workspace/tools/jdk17` (dari api.adoptium.net), `JAVA_HOME` diarahkan ke sana saat build.
+2. **Gradle wrapper gagal unduh** (`SocketException: Connection reset` saat CONNECT tunnel) → fix pola sdkmanager: `JAVA_TOOL_OPTIONS=-Djava.net.preferIPv4Stack=true`.
+3. **Dependensi Maven Central selalu `Read timed out`** — biang keroknya **proxy-forwarder lokal 127.0.0.1:8899**: file POM yang sama lewat proxy egress utama selesai 1,4 detik (HTTP 200), lewat 8899 timeout total 60 detik. **Fix final:** Gradle diarahkan ke proxy egress utama via `~/.gradle/gradle.properties` (systemProp http/https proxyHost/Port/User/Password diambil dari env `https_proxy` saat setup — nilainya tidak ditulis di dokumen ini) + timeout HTTP Gradle 180 detik di `android/gradle.properties`. Setelah itu build ke-4 sukses (Gradle task 1.242 detik; Gradle juga auto-install Build-Tools 36).
+4. Percobaan delegasi ke subagent untuk pekerjaan ini ditolak sistem keamanan (23 Okt ~13:28) — pekerjaan akhirnya dikerjakan langsung di sesi utama dan berhasil. Percobaan build gagal total 3×, semuanya murni jaringan/proxy, bukan kode (analyze bersih sebelum build pertama).
+
+### Langkah berikutnya
+1. Uji instal di HP pemilik (Redmi Note 11): cek TTS en-GB device (kualitas suara penentu), pencarian, dan tombol Slow.
+2. Pengayaan `ipa_uk` + `gloss_id` dari Kaikki/Wiktionary; perluas dataset ke 100 rb+ kata (saat itu `pronunciation`, `computer` dst. ikut masuk) — ganti nama file DB versi (`_v2`) agar tidak tertutup salinan lama.
+3. Signing release proper (keystore sendiri) bila prototype naik jadi rilis beneran.
+
+---
+
+## PEKERJAAN 4 — Dataset v2 (Kaikki) + Rebrand + APK v2 ✅ SELESAI (23 Okt 2026, ~16:16 WIB)
+
+**Output:** `~/workspace/your_files/PronounceIt-v2-arm64.apk` (32.452.932 byte / 32,5 MB, SHA256 `9c29abad0bfe919ebfef101eec9b3cd754c541f677a4299874199690eb42d996`), label terverifikasi via aapt: **"English Dictionary: Pronounce It!"** (nama pilihan pemilik, menggantikan "Kamus Pronunciation"), package sama `com.kamus.kamus_pronunciation` (instal sebagai update di atas v1), asset terbundle `assets/kamus_v2.sqlite` 33.067.008 byte (identik file sumber), tanda tangan valid.
+
+### Dataset v2 (`data/kamus_v2.sqlite`, 33 MB, skrip `scripts/enrich_kaikki.py`)
+- Sumber: `data/kaikki-en.jsonl` (dump wiktextract English Wiktionary via kaikki.org, 3.430.807.113 byte, Last-Modified 21 Okt 2026; CC BY-SA) di-stream ke staging disk (RAM datar), lalu digabung.
+- Hasil: **91.556 kata** (1.000 prototype + 90.556 baru). Cakupan: IPA UK/RP bertanda khusus 36.725 (40,1%), IPA US 53.949, `ipa_other` 54.335, minimal-satu-IPA **100%**, syllables (CMU) 33.369, contoh 61.138, gloss_id 10.916 (11,9%). Statistik: `data/dataset_v2_stats.json`.
+- Kolom baru **`ipa_other`**: transkripsi Wiktionary TANPA label wilayah. Temuan penting: banyak headword (termasuk *pronunciation* sendiri) hanya punya IPA tanpa tag UK/US — run pertama membuangnya sehingga *pronunciation* hilang; run kedua menyimpannya sebagai `ipa_other` dan app menampilkannya tanpa label (tidak pernah dilabeli UK/US secara karangan). Klasifikasi tag kini token-based (substring lama berisiko: "Australia" mengandung "us").
+- App: IPA ditampilkan UK dulu → US → tanpa label; baris "Arti: …" bila gloss_id ada; DB disalin ke nama file baru `kamus_v2.sqlite` agar tidak tertutup salinan v1.
+
+### Catatan pengiriman
+- Lampiran chat untuk file besar TERPOTONG di sisi HP pemilik (v1 48,6 MB gagal; arm64 17 MB tiba 13 MB). Jalur yang terbukti: link unduh langsung Muse storage + sebutkan ukuran byte persis untuk verifikasi. APK v1 akhirnya terinstal baik via link ("sudah bagus" — pemilik, 23 Okt).
+
+
+## PEKERJAAN 6 — Koreksi user + gloss WordNet Bahasa + APK v2.2 (2026-10-23 16:31–17:01 WIB)
+
+Koreksi user atas v2: (1) IPA UK/US masih bercampur & default kadang ketuker; (2) tambahkan arti Indonesia sebelum definisi; (3) tombol clear pencarian (bukan hapus manual); (4) About: selain nama user, tambahkan "proudly present for the four pillars English club of Panca Bhakti Vocational High school".
+
+Perubahan app (v1.1.0/v2.1, lalu digabung ke v1.2.0/v2.2 sebelum v2.1 sempat dikirim):
+- IPA: SATU transkripsi utama saja, rantai prioritas ipa_uk -> ipa_other -> ipa_us (label IPA (UK) / IPA / IPA (US)); berlaku di detail & subtitle daftar. US tidak lagi jadi default diam-diam.
+- Section "Arti (Bahasa Indonesia)" tampil sebelum "Definition" bila gloss ada.
+- Kolom pencarian: suffixIcon tombol ✕ (clear) muncul saat ada teks.
+- Halaman About baru (ikon info di AppBar): nama app, versi, "Developed by Muhammad Abdul Aziz, S.Pd", kalimat "Proudly presented for the Four Pillars English Club of Panca Bhakti Vocational High School", atribusi sumber terbuka.
+
+Gloss — dua jalur dicoba:
+- id.wiktionary via Kaikki (kaikki-id.jsonl 70.005.729 B, dump 21 Okt 2026): GAGAL TOTAL — isinya 40.742 entri HANYA headword bahasa Indonesia (lang 'id'), nol headword Inggris, nol translations ke 'en'. scripts/merge_gloss_id.py mengisi 0. Jalur ini buntu.
+- WordNet Bahasa (Open Multilingual Wordnet omw-1.4, wn-data-ind.tab di msa/, header menyatakan MIT, http://wn-msa.sourceforge.net/; 38.085 synset ber-lemma Indonesia): scripts/merge_gloss_wordnet_bahasa.py — aturan kualitas: synset Inggris pertama yang lemma-nya memuat kata persis (case-sensitive; membuang sampah singkatan/nama diri: was->Washington, at->astatine) DAN punya lemma Indonesia; gloss = maks 3 lemma. Hasil: +11.453 kata -> gloss_id 10.916 -> 22.369 / 91.556 = 24,4%. Probe bersih: democracy->demokrasi, freedom->kebebasan, government->pemerintah, just->adil, benar, berpatutan. Output data/kamus_v22.sqlite (33.861.632 B).
+
+APK FINAL v2.2: ~/workspace/your_files/PronounceIt-v22-arm64.apk = 32.738.461 B, SHA256 7c5cf5aafb67244187d73f8cd7cdd4c8aef97703d180537f7c96cea9aafa6c60, versionName 1.2.0 (code 2003), label "English Dictionary: Pronounce It!", asset dalam APK = kamus_v22.sqlite persis 33.861.632 B, package sama (update di atas v2). Link Muse storage: https://muse.ai/files/1397741110080420/1413954850893433/va1b6hprccxecsrh0kd6pxw6/PronounceIt-v22-arm64.apk (kedaluwarsa 2026-10-25 17:01 WIB). Catatan: build v2.1 (1.1.0, 32.453.201 B, SHA 2d13d381...) selesai 16:46 tapi TIDAK dikirim — digantikan v2.2 sesuai pilihan user "gabungkan sekalian". Build v2.1 makan 12,2 menit, v2.2 cuma 2,2 menit (cache Gradle hangat).
+
+
+## PEKERJAAN 7 — Polish v2.3: keyboard autofocus, versi beta, About reorder (2026-10-23 17:09–17:38 WIB)
+
+Koreksi user atas v2.2: (1) keyboard otomatis — muncul saat app dibuka, saat kembali dari halaman detail, dan setelah clear ("keyboard centik"); (2) versi ditambah "- beta"; (3) judul "Pronounce It!" di header ditebalkan; (4) "Developed by" dipindah ke paling bawah About; (5) tulisan Four Pillars dibuat bold italic.
+
+Implementasi: FocusNode di _HomePageState + autofocus:true di TextField pencarian; requestFocus() di handler tombol clear dan di .then() setelah Navigator.push detail kembali (guard mounted); AppBar title TextStyle bold; About diurut ulang (nama app -> versi "1.2.0 - beta" -> Four Pillars bold italic -> Data sources -> Developed by di dasar); pubspec version 1.2.0-beta+4 (aapt versionName terverifikasi '1.2.0-beta'). Dataset TIDAK berubah (asset tetap kamus_v22.sqlite, nama file lokal sama, jadi update mulus).
+
+APK v2.3: ~/workspace/your_files/PronounceIt-v23-arm64.apk = 32.738.469 B, SHA256 092862f39381e131d864f2dff8417434759131c2d09c899087d56b9b4bc6c344, versionCode 2004. Upload pertama terputus restart layanan (file lokal diverifikasi utuh via SHA), upload ulang sukses: https://muse.ai/files/1397741110080420/1953682172274837/k3fi0cgj2s8q69cmnbz1rs5g/PronounceIt-v23-arm64.apk (kedaluwarsa 2026-10-25 17:38 WIB).

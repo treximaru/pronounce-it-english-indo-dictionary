@@ -1,0 +1,12 @@
+{
+  "total_rows": 1000,
+  "pool_size": 1500,
+  "skipped_no_wordnet_in_pool_scan": 69,
+  "with_example": 930,
+  "with_example_pct": 93.0,
+  "with_syllables": 998,
+  "with_syllables_pct": 99.8,
+  "with_stress": 998,
+  "with_ipa_us": 998,
+  "with_ipa_uk": 0
+}
