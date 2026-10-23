@@ -152,6 +152,17 @@ class _HomePageState extends State<HomePage> {
   final _focusNode = FocusNode();
   Future<List<WordEntry>> _results = KamusDb.search('');
 
+  @override
+  void initState() {
+    super.initState();
+    // autofocus:true alone is unreliable on first launch (window not yet
+    // focused when the field is built), so request focus after the first
+    // frame is drawn.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focusNode.requestFocus();
+    });
+  }
+
   void _onSearch(String value) {
     setState(() {
       _results = KamusDb.search(value);
@@ -253,7 +264,9 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ).then((_) {
                           // Back from a word: keyboard up, ready to search.
-                          if (mounted) _focusNode.requestFocus();
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (mounted) _focusNode.requestFocus();
+                          });
                         });
                       },
                     );

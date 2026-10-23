@@ -135,3 +135,22 @@ Koreksi user atas v2.2: (1) keyboard otomatis — muncul saat app dibuka, saat k
 Implementasi: FocusNode di _HomePageState + autofocus:true di TextField pencarian; requestFocus() di handler tombol clear dan di .then() setelah Navigator.push detail kembali (guard mounted); AppBar title TextStyle bold; About diurut ulang (nama app -> versi "1.2.0 - beta" -> Four Pillars bold italic -> Data sources -> Developed by di dasar); pubspec version 1.2.0-beta+4 (aapt versionName terverifikasi '1.2.0-beta'). Dataset TIDAK berubah (asset tetap kamus_v22.sqlite, nama file lokal sama, jadi update mulus).
 
 APK v2.3: ~/workspace/your_files/PronounceIt-v23-arm64.apk = 32.738.469 B, SHA256 092862f39381e131d864f2dff8417434759131c2d09c899087d56b9b4bc6c344, versionCode 2004. Upload pertama terputus restart layanan (file lokal diverifikasi utuh via SHA), upload ulang sukses: https://muse.ai/files/1397741110080420/1953682172274837/k3fi0cgj2s8q69cmnbz1rs5g/PronounceIt-v23-arm64.apk (kedaluwarsa 2026-10-25 17:38 WIB).
+
+
+## PEKERJAAN 8 — Dokumentasi + repo git lokal untuk persiapan GitHub (2026-10-23 ~17:45 WIB)
+
+Atas permintaan user ("buat dokumentasinya dulu, untuk persiapan upload ke github biar tidak hilang"):
+- README.md utama (Inggris, GitHub-facing) di root proyek: deskripsi, fitur, tabel sumber data + lisensi, pipeline dataset (3 skrip + URL dump), cara build dari sumber, struktur proyek, riwayat versi, roadmap, kredit (Four Pillars + Developed by).
+- .gitignore root: .venv, data/*.jsonl (dump 3,2 GB), data/*.sqlite, corpora_zips, build Flutter, app/assets/kamus_v22.sqlite, *.apk/*.aab (binari via GitHub Releases).
+- docs/: 3 dokumen konsep disalin dari your_files (Konsep, Pembaruan v1.1, Spek Prototype).
+- git init -b main + commit awal 14d7a14: 142 file terlacak, file terbesar cuma 104K (ikon) — bersih dari file raksasa. Identitas repo-lokal: "Muhammad Abdul Aziz <aziz@localhost>" (email placeholder, ganti ke email GitHub sebelum push).
+- BELUM di-upload ke GitHub — menunggu user (buat repo + remote + push, atau minta Muse bantu saat akun siap). APK didistribusikan via Releases, bukan commit.
+
+
+## PEKERJAAN 9 — Fix keyboard pertama buka + jeda GitHub (2026-10-23 17:52–18:22 WIB)
+
+User menunda upload GitHub ("nanti dulu") karena bug: saat PERTAMA kali buka app, keyboard tetap tidak muncul meski sudah autofocus di v2.3. Proses gh auth login (kode D119-8170) dihentikan atas jeda ini; repo akan dibuat PUBLIC sesuai pilihan user, nama pronounce-it-english-indo-dictionary, email git sudah treximaru@gmail.com (commit lokal diamend ke 076b0d2).
+
+Penyebab: autofocus:true tidak andal pada peluncuran pertama — field selesai dibangun sebelum window mendapat fokus, permintaan keyboard hilang. Fix v2.4 (1.2.0-beta+5): _HomePageState.initState meminta fokus via WidgetsBinding.addPostFrameCallback -> _focusNode.requestFocus(); jalur kembali-dari-detail juga dibungkus post-frame callback yang sama. flutter analyze bersih.
+
+APK v2.4: ~/workspace/your_files/PronounceIt-v24-arm64.apk = 32.738.469 B, SHA256 d24872b26750a1c17c07f7d69ff244331d70b812f05ba4d32e50c021c5907c5c, versionCode 2005, versionName '1.2.0-beta', asset kamus_v22.sqlite utuh. Link: https://muse.ai/files/1397741110080420/1096072899880846/m826ikpmo0y73ekin0wicjwh/PronounceIt-v24-arm64.apk (kedaluwarsa 2026-10-25 18:22 WIB). Fix juga di-commit ke repo lokal (setelah commit awal 076b0d2). Menunggu tes user pada skenario buka-pertama; GitHub push menyusul setelah app dinyatakan beres.
