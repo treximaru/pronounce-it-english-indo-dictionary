@@ -154,3 +154,14 @@ User menunda upload GitHub ("nanti dulu") karena bug: saat PERTAMA kali buka app
 Penyebab: autofocus:true tidak andal pada peluncuran pertama — field selesai dibangun sebelum window mendapat fokus, permintaan keyboard hilang. Fix v2.4 (1.2.0-beta+5): _HomePageState.initState meminta fokus via WidgetsBinding.addPostFrameCallback -> _focusNode.requestFocus(); jalur kembali-dari-detail juga dibungkus post-frame callback yang sama. flutter analyze bersih.
 
 APK v2.4: ~/workspace/your_files/PronounceIt-v24-arm64.apk = 32.738.469 B, SHA256 d24872b26750a1c17c07f7d69ff244331d70b812f05ba4d32e50c021c5907c5c, versionCode 2005, versionName '1.2.0-beta', asset kamus_v22.sqlite utuh. Link: https://muse.ai/files/1397741110080420/1096072899880846/m826ikpmo0y73ekin0wicjwh/PronounceIt-v24-arm64.apk (kedaluwarsa 2026-10-25 18:22 WIB). Fix juga di-commit ke repo lokal (setelah commit awal 076b0d2). Menunggu tes user pada skenario buka-pertama; GitHub push menyusul setelah app dinyatakan beres.
+
+
+## PEKERJAAN 10 — Keyboard masih gagal di v2.4 -> serangan 3 lapis v2.5 (2026-10-23 18:25–18:38 WIB)
+
+User melaporkan v2.4 TETAP tidak memunculkan keyboard saat start. Diagnosis: MIUI/Redmi mengabaikan permintaan keyboard implisit saat peluncuran; post-frame requestFocus saja tidak cukup. Fix v2.5 (1.2.0-beta+6), tiga lapis sekaligus:
+1. AndroidManifest: windowSoftInputMode "adjustResize" -> "stateAlwaysVisible|adjustResize".
+2. MainActivity.kt (sebelumnya kosong): override onWindowFocusChanged -> Handler postDelayed 400 ms -> InputMethodManager.showSoftInput(decorView, SHOW_FORCED).
+3. Dart initState: post-frame requestFocus + retry Future.delayed 450 ms bila belum fokus.
+flutter analyze bersih; build sukses 2,6 menit (Kotlin terkompilasi).
+
+APK v2.5: ~/workspace/your_files/PronounceIt-v25-arm64.apk = 32.738.469 B, SHA256 814f5c4fc1c11a24fa16667e959b6968abc8b43b9d62444f2181f16789bfc50b, versionCode 2006. Link: https://muse.ai/files/1397741110080420/1874862387289016/rvglgtf2jcma9y09ew1i5uri/PronounceIt-v25-arm64.apk (kedaluwarsa 2026-10-25 18:38 WIB). Fix di-commit lokal. Diagnostik cadangan bila masih gagal: tanya user apakah kursor berkedip di kolom pencarian (fokus dapat tapi IME diblokir vs fokus gagal total).

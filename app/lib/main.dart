@@ -157,9 +157,13 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     // autofocus:true alone is unreliable on first launch (window not yet
     // focused when the field is built), so request focus after the first
-    // frame is drawn.
+    // frame is drawn — plus one delayed retry, because some OEM keyboards
+    // drop a show request that arrives during the launch transition.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _focusNode.requestFocus();
+    });
+    Future.delayed(const Duration(milliseconds: 450), () {
+      if (mounted && !_focusNode.hasFocus) _focusNode.requestFocus();
     });
   }
 
