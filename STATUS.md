@@ -174,3 +174,22 @@ User melaporkan v2.5 tetap gagal DAN memberi data kunci: "kursor berkedip" — f
 Fix v2.6 (1.2.0-beta+7): MainActivity.kt ditulis ulang jadi retry-loop — saat window focus: tiap 300 ms (maks 10x) panggil imm.showSoftInput(decorView.findFocus() ?: decorView, 0), berhenti begitu rootWindowInsets.isVisible(IME) == true. Manifest stateAlwaysVisible + retry Dart dipertahankan. Analyze bersih, build 1,7 menit.
 
 APK v2.6: ~/workspace/your_files/PronounceIt-v26-arm64.apk = 32.738.469 B, SHA256 17c4568c0b2809b9d2662b730d7f1a85afaff56772333a91f9e4f2c570ecce67, versionCode 2007. Link: https://muse.ai/files/1397741110080420/1755840639043990/zu32kq5q9sl8ktuazgfmjwg4/PronounceIt-v26-arm64.apk (kedaluwarsa 2026-10-25 18:52 WIB). Di-commit lokal. Menunggu tes user.
+
+
+## PEKERJAAN 12 — Keyboard v2.6 TERKONFIRMASI + lanjut GitHub (2026-10-23 ~19:12 WIB)
+
+User mengonfirmasi v2.6: "Oke udah muncul sekarang" — keyboard muncul saat start. Saga keyboard selesai: yang berhasil = retry-loop native showSoftInput ke view fokus sampai IME terlihat (v2.6), di atas fondasi stateAlwaysVisible + fokus Dart. v2.3/v2.4/v2.5 gagal di MIUI.
+
+User memerintahkan lanjut persiapan GitHub. Alur gh auth login --web diulang (kode lama mati karena proses dihentikan): kode device baru diterbitkan, menunggu persetujuan user; setelah itu buat repo PUBLIC pronounce-it-english-indo-dictionary + push + Release v1.2.0-beta berisi APK v2.6.
+
+
+## PEKERJAAN 13 — TERBIT DI GITHUB (2026-10-23 ~19:18–19:19 WIB)
+
+gh auth login berhasil (akun treximaru, device code F7D4-BDD5 disetujui user). Repo PUBLIC dibuat + push sukses: https://github.com/treximaru/pronounce-it-english-indo-dictionary (branch main -> origin/main, semua commit sampai d84285c). Release pre-release v1.2.0-beta dibuat dengan PronounceIt-v26-arm64.apk terlampir: https://github.com/treximaru/pronounce-it-english-indo-dictionary/releases/tag/v1.2.0-beta. Proyek resmi terarsip di GitHub — tujuan "biar tidak hilang" tercapai. gh di VM kini terautentikasi sebagai treximaru (token di ~/.config/gh, JANGAN dicetak).
+
+## PEKERJAAN 14 — SELESAI (dataset + kode) / BUILD TERBLOKIR ENV (2026-10-24 ~05:00-05:50)
+- Fitur sinonim & antonim (permintaan owner): dataset kamus_v23.sqlite (36.573.184 B) = v22 + kolom synonyms/antonyms. Sumber: Wiktionary (Kaikki, per-makna) utama + WordNet pengisi; dibersihkan (hanya kata yang juga headword; buang nama diri). Hasil akhir: sinonim 33.056 kata (36,1
+## PEKERJAAN 14 — SELESAI (dataset + kode) / BUILD TERBLOKIR ENV (2026-10-24 ~05:00-05:50)
+- Fitur sinonim & antonim (permintaan owner): dataset kamus_v23.sqlite (36.573.184 B) = v22 + kolom synonyms/antonyms. Sumber: Wiktionary (Kaikki, per-makna) utama + WordNet pengisi; dibersihkan (hanya kata yang juga headword; buang nama diri). Hasil akhir: sinonim 33.056 kata (36,1%), antonim 7.993 kata (8,7%). Script: scripts/add_synonyms_antonyms.py.
+- App v1.3.0-beta+8: section Synonyms (chip HIJAU) & Antonyms (chip MERAH) setelah Example; chip bisa diketuk -> lompat ke halaman kata tsb (KamusDb.lookup). About: "Version 1.3.0 - beta · October 2026" (bulan-tahun di sebelah versi, sesuai permintaan owner) + atribusi sumber diperbarui. flutter analyze BERSIH.
+- BUILD GAGAL TOTAL di instance VM ini: sejak restart ~05:05, Gradle daemon tidak pernah bisa dihubungi client ("could not be connected" / "first result empty") — bahkan ./gradlew help gagal/hang. Diagnosis: loopback TCP biasa normal (tes python http.server 200), JVM polos pegang 800MB RAM normal, daemon hidup sehat tapi handshake client<->daemon black-hole; daemon single-use berhenti sendiri setelah idleTimeout 120s. RAM host juga tertekan (MemAvailable ~0,6-0,9GB dari 8GB; AnonPages lokal cuma 1,26GB -> tekanan dari luar instance). Semua build semalam (s/d v2.6) jalan di instance SEBELUM restart. Kesimpulan: cacat environment instance ini, BUKAN kode/dataset. Opsi: build di batam (SSH publik terverifikasi) atau tunggu instance VM berganti/pulih lalu build ulang.

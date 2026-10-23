@@ -21,7 +21,7 @@ app/android/local.properties
 app/ios/Flutter/Generated.xcconfig
 
 # Bundled database asset (copied from data/ at build time)
-app/assets/kamus_v22.sqlite
+app/assets/kamus_v23.sqlite
 
 # Release binaries (distributed via GitHub Releases instead)
 *.apk

@@ -22,6 +22,8 @@ class WordEntry {
   final String? ipaUk;
   final String? ipaOther;
   final String? glossId;
+  final String? synonyms;
+  final String? antonyms;
   final String? syllables;
   final int? syllableCount;
   final int? stressIndex;
@@ -37,6 +39,8 @@ class WordEntry {
     this.ipaUk,
     this.ipaOther,
     this.glossId,
+    this.synonyms,
+    this.antonyms,
     this.syllables,
     this.syllableCount,
     this.stressIndex,
@@ -53,6 +57,8 @@ class WordEntry {
         ipaUk: m['ipa_uk'] as String?,
         ipaOther: m['ipa_other'] as String?,
         glossId: m['gloss_id'] as String?,
+        synonyms: m['synonyms'] as String?,
+        antonyms: m['antonyms'] as String?,
         syllables: m['syllables'] as String?,
         syllableCount: m['syllable_count'] as int?,
         stressIndex: m['stress_index'] as int?,
@@ -69,9 +75,9 @@ class KamusDb {
     if (_db != null) return _db!;
     final dbDir = await getDatabasesPath();
     // Versioned filename so a future dataset update is not shadowed by a stale copy.
-    final path = p.join(dbDir, 'kamus_v22.sqlite');
+    final path = p.join(dbDir, 'kamus_v23.sqlite');
     if (!await File(path).exists()) {
-      final data = await rootBundle.load('assets/kamus_v22.sqlite');
+      final data = await rootBundle.load('assets/kamus_v23.sqlite');
       final bytes =
           data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
       await File(path).writeAsBytes(bytes, flush: true);
@@ -94,6 +100,14 @@ class KamusDb {
       );
     }
     return rows.map(WordEntry.fromMap).toList();
+  }
+
+  static Future<WordEntry?> lookup(String word) async {
+    final db = await instance();
+    final rows = await db.query('words',
+        where: 'word = ?', whereArgs: [word.toLowerCase()], limit: 1);
+    if (rows.isEmpty) return null;
+    return WordEntry.fromMap(rows.first);
   }
 }
 
@@ -418,11 +432,84 @@ class _DetailPageState extends State<DetailPage> {
                 label: const Text('Listen to example'),
               ),
             ],
+            if (w.synonyms != null && w.synonyms!.isNotEmpty) ...[
+              const SizedBox(height: 24),
+              Text('Synonyms',
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green.shade800)),
+              const SizedBox(height: 8),
+              _wordChips(
+                context,
+                w.synonyms!.split(', '),
+                background: Colors.green.shade50,
+                border: Colors.green.shade300,
+                foreground: Colors.green.shade900,
+              ),
+            ],
+            if (w.antonyms != null && w.antonyms!.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              Text('Antonyms',
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red.shade800)),
+              const SizedBox(height: 8),
+              _wordChips(
+                context,
+                w.antonyms!.split(', '),
+                background: Colors.red.shade50,
+                border: Colors.red.shade300,
+                foreground: Colors.red.shade900,
+              ),
+            ],
           ],
         ),
       ),
     );
   }
+}
+
+// Tappable word chips (synonyms / antonyms): tap jumps to that word's page.
+Widget _wordChips(
+  BuildContext context,
+  List<String> words, {
+  required Color background,
+  required Color border,
+  required Color foreground,
+}) {
+  return Wrap(
+    spacing: 8,
+    runSpacing: 8,
+    children: [
+      for (final word in words)
+        InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () async {
+            final entry = await KamusDb.lookup(word);
+            if (entry != null && context.mounted) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => DetailPage(entry: entry),
+                ),
+              );
+            }
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: background,
+              border: Border.all(color: border),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Text(word,
+                style: TextStyle(fontSize: 15, color: foreground)),
+          ),
+        ),
+    ],
+  );
 }
 
 // ---------- About ----------
@@ -442,7 +529,7 @@ class AboutPage extends StatelessWidget {
             const Text('English Dictionary: Pronounce It!',
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
-            const Text('Version 1.2.0 - beta',
+            const Text('Version 1.3.0 - beta · October 2026',
                 style: TextStyle(color: Colors.grey)),
             const SizedBox(height: 24),
             const Text(
@@ -462,7 +549,8 @@ class AboutPage extends StatelessWidget {
               'Pronunciations: English Wiktionary via Kaikki '
               '(wiktextract), CC BY-SA. Indonesian meanings: English '
               'Wiktionary translations (CC BY-SA) & WordNet Bahasa '
-              '(MIT). Definitions: Open English WordNet (via NLTK). '
+              '(MIT). Definitions, synonyms & antonyms: Open English '
+              'WordNet (via NLTK) & English Wiktionary (CC BY-SA). '
               'Syllables & stress: CMU Pronouncing Dictionary. '
               'Frequency ranking: wordfreq.',
               style: TextStyle(fontSize: 14, height: 1.45),
