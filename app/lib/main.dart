@@ -180,13 +180,30 @@ class Speaker {
   static Future<void> speak(String text, {required double rate}) async {
     if (Platform.isLinux) {
       // flutter_tts does not support Linux: use espeak-ng instead.
-      // Rate 0.5 -> ~88 wpm, 0.25 -> ~44 wpm (base 175 wpm).
+      // espeak's wpm scale is NOT comparable to flutter_tts rates: the
+      // old mapping (0.5 -> 88 wpm, 0.25 -> 44 wpm) sounded painfully
+      // dragged. Listen (0.5) -> 150 wpm (near-normal, slightly slow),
+      // Slow (0.25) -> 115 wpm (clearly slow but not dragging); any
+      // other rate maps to base 175 clamped to 110-175 wpm.
+      // Younger-sounding voice: female variant + higher pitch.
+      int wpm;
+      if (rate == 0.5) {
+        wpm = 150;
+      } else if (rate == 0.25) {
+        wpm = 115;
+      } else {
+        wpm = (rate * 175).round();
+        if (wpm < 110) wpm = 110;
+        if (wpm > 175) wpm = 175;
+      }
       try {
         await Process.run('espeak-ng', [
           '-v',
-          'en-gb',
+          'en-gb+f3',
+          '-p',
+          '65',
           '-s',
-          (rate * 175).round().toString(),
+          wpm.toString(),
           text,
         ]);
       } catch (_) {
