@@ -123,6 +123,9 @@ class KamusDb {
     // Versioned filename so a future dataset update is not shadowed by a stale copy.
     final path = p.join(dbDir, 'kamus_v26.sqlite');
     if (!await File(path).exists()) {
+      // Desktop (sqflite_common_ffi) does not create the databases dir for us;
+      // without this the asset copy below fails with PathNotFoundException.
+      await Directory(dbDir).create(recursive: true);
       final data = await rootBundle.load('assets/kamus_v26.sqlite');
       final bytes =
           data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
