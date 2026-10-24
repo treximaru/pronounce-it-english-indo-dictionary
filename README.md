@@ -34,6 +34,8 @@ Current release: **1.3.0-beta** (Android, arm64)
   returning from a word, and after clearing
 - Fast search — the exact word you type always comes first, then prefix
   matches by frequency — with a one-tap clear (✕) button
+- **Light / Dark / Follow-system theme** — tap the theme icon in the top bar
+  to cycle; the choice is saved and kept across restarts
 - No accounts, no ads, no tracking; dictionary data never leaves the phone
 
 ## Data sources (all open)
@@ -138,6 +140,7 @@ key, so new versions install directly over the previous one.
 | 1.2.0 | 2026-10-23 | Single UK-first IPA display, Arti section, clear button, About page; +11,453 Indonesian glosses from WordNet Bahasa (24.4% total) |
 | 1.2.0-beta | 2026-10-23 | Keyboard autofocus everywhere, bold header title, About reordered (Four Pillars bold italic, Developed by at the bottom) |
 | 1.3.0-beta | 2026-10-24 | Synonyms (green) & antonyms (red) sections with tappable chips; dataset v24 (Britfone syllable/stress fills); About shows month + year; built on the void build server; later that day: rebuilt with permanent release signing + search-order fix (exact match always first) |
+| 1.4.0-beta | 2026-10-24 | Light / Dark / Follow-system theme (saved across restarts); word page & chips made dark-mode safe |
 
 ## Roadmap
 

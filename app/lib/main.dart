@@ -4,9 +4,49 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:path/path.dart' as p;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 
-void main() {
+// ---------- Theme (Light / Dark / Follow system) ----------
+
+/// Current theme mode, shared by every page. Persisted in SharedPreferences
+/// so the choice survives app restarts.
+final ValueNotifier<ThemeMode> themeModeNotifier =
+    ValueNotifier<ThemeMode>(ThemeMode.system);
+
+const _themePrefKey = 'theme_mode';
+
+Future<void> _loadThemeMode() async {
+  final prefs = await SharedPreferences.getInstance();
+  final saved = prefs.getString(_themePrefKey);
+  themeModeNotifier.value = switch (saved) {
+    'light' => ThemeMode.light,
+    'dark' => ThemeMode.dark,
+    _ => ThemeMode.system,
+  };
+}
+
+/// Cycles System -> Light -> Dark -> System, and saves the choice.
+Future<void> cycleThemeMode() async {
+  themeModeNotifier.value = switch (themeModeNotifier.value) {
+    ThemeMode.system => ThemeMode.light,
+    ThemeMode.light => ThemeMode.dark,
+    ThemeMode.dark => ThemeMode.system,
+  };
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setString(
+    _themePrefKey,
+    switch (themeModeNotifier.value) {
+      ThemeMode.light => 'light',
+      ThemeMode.dark => 'dark',
+      ThemeMode.system => 'system',
+    },
+  );
+}
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await _loadThemeMode();
   runApp(const KamusApp());
 }
 
@@ -146,13 +186,26 @@ class KamusApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'English Dictionary: Pronounce It!',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
-        useMaterial3: true,
-      ),
-      home: const HomePage(),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: themeModeNotifier,
+      builder: (context, mode, _) {
+        return MaterialApp(
+          title: 'English Dictionary: Pronounce It!',
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
+            useMaterial3: true,
+          ),
+          darkTheme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: Colors.indigo,
+              brightness: Brightness.dark,
+            ),
+            useMaterial3: true,
+          ),
+          themeMode: mode,
+          home: const HomePage(),
+        );
+      },
     );
   }
 }
@@ -204,6 +257,22 @@ class _HomePageState extends State<HomePage> {
         title: const Text('Pronounce It!',
             style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
+          ValueListenableBuilder<ThemeMode>(
+            valueListenable: themeModeNotifier,
+            builder: (context, mode, _) {
+              final (icon, tip) = switch (mode) {
+                ThemeMode.light => (Icons.light_mode, 'Theme: Light'),
+                ThemeMode.dark => (Icons.dark_mode, 'Theme: Dark'),
+                ThemeMode.system =>
+                  (Icons.brightness_auto, 'Theme: Follow system'),
+              };
+              return IconButton(
+                icon: Icon(icon),
+                tooltip: tip,
+                onPressed: cycleThemeMode,
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.info_outline),
             tooltip: 'About',
@@ -328,7 +397,9 @@ class _DetailPageState extends State<DetailPage> {
     final stressIdx = (w.stressIndex ?? 0) - 1; // stored 1-based
     return RichText(
       text: TextSpan(
-        style: const TextStyle(fontSize: 20, color: Colors.black87),
+        // No explicit color: inherits the theme's default text color,
+        // so syllables stay readable in both light and dark mode.
+        style: const TextStyle(fontSize: 20),
         children: [
           for (var i = 0; i < parts.length; i++) ...[
             if (i > 0) const TextSpan(text: ' · '),
@@ -339,7 +410,7 @@ class _DetailPageState extends State<DetailPage> {
                     i == stressIdx ? FontWeight.bold : FontWeight.normal,
                 color: i == stressIdx
                     ? Theme.of(context).colorScheme.primary
-                    : Colors.black87,
+                    : null,
               ),
             ),
           ],
@@ -350,6 +421,7 @@ class _DetailPageState extends State<DetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       appBar: AppBar(title: Text(w.word)),
       body: SingleChildScrollView(
@@ -441,14 +513,19 @@ class _DetailPageState extends State<DetailPage> {
                   style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: Colors.green.shade800)),
+                      color: dark
+                          ? Colors.green.shade300
+                          : Colors.green.shade800)),
               const SizedBox(height: 8),
               _wordChips(
                 context,
                 w.synonyms!.split(', '),
-                background: Colors.green.shade50,
-                border: Colors.green.shade300,
-                foreground: Colors.green.shade900,
+                background:
+                    dark ? Colors.green.shade900 : Colors.green.shade50,
+                border:
+                    dark ? Colors.green.shade700 : Colors.green.shade300,
+                foreground:
+                    dark ? Colors.green.shade100 : Colors.green.shade900,
               ),
             ],
             if (w.antonyms != null && w.antonyms!.isNotEmpty) ...[
@@ -457,14 +534,14 @@ class _DetailPageState extends State<DetailPage> {
                   style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: Colors.red.shade800)),
+                      color: dark ? Colors.red.shade300 : Colors.red.shade800)),
               const SizedBox(height: 8),
               _wordChips(
                 context,
                 w.antonyms!.split(', '),
-                background: Colors.red.shade50,
-                border: Colors.red.shade300,
-                foreground: Colors.red.shade900,
+                background: dark ? Colors.red.shade900 : Colors.red.shade50,
+                border: dark ? Colors.red.shade700 : Colors.red.shade300,
+                foreground: dark ? Colors.red.shade100 : Colors.red.shade900,
               ),
             ],
           ],
@@ -532,7 +609,7 @@ class AboutPage extends StatelessWidget {
             const Text('English Dictionary: Pronounce It!',
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
-            const Text('Version 1.3.0 - beta · October 2026',
+            const Text('Version 1.4.0 - beta · October 2026',
                 style: TextStyle(color: Colors.grey)),
             const SizedBox(height: 24),
             const Text(
