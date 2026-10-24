@@ -6,6 +6,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 // ---------- Theme (Light / Dark / Follow system) ----------
 
@@ -113,6 +114,11 @@ class KamusDb {
 
   static Future<Database> instance() async {
     if (_db != null) return _db!;
+    if (Platform.isLinux || Platform.isWindows) {
+      // Desktop: sqflite needs the ffi backend (no platform plugin).
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+    }
     final dbDir = await getDatabasesPath();
     // Versioned filename so a future dataset update is not shadowed by a stale copy.
     final path = p.join(dbDir, 'kamus_v26.sqlite');
@@ -157,6 +163,8 @@ class KamusDb {
 // ---------- TTS ----------
 
 class Speaker {
+  // flutter_tts has no Linux implementation: hide the buttons there.
+  static bool get supported => !Platform.isLinux;
   static final FlutterTts _tts = FlutterTts();
   static bool _ready = false;
 
@@ -168,6 +176,7 @@ class Speaker {
   }
 
   static Future<void> speak(String text, {required double rate}) async {
+    if (!supported) return;
     await _init();
     await _tts.stop();
     await _tts.setSpeechRate(rate);
@@ -175,6 +184,7 @@ class Speaker {
   }
 
   static Future<void> stop() async {
+    if (!supported) return;
     await _tts.stop();
   }
 }
@@ -461,21 +471,22 @@ class _DetailPageState extends State<DetailPage> {
                     style: const TextStyle(color: Colors.grey)),
               ),
             const SizedBox(height: 20),
-            Row(
-              children: [
-                FilledButton.icon(
-                  onPressed: () => Speaker.speak(w.word, rate: 0.5),
-                  icon: const Icon(Icons.volume_up),
-                  label: const Text('Listen'),
-                ),
-                const SizedBox(width: 8),
-                OutlinedButton.icon(
-                  onPressed: () => Speaker.speak(w.word, rate: 0.25),
-                  icon: const Icon(Icons.slow_motion_video),
-                  label: const Text('Slow'),
-                ),
-              ],
-            ),
+            if (Speaker.supported)
+              Row(
+                children: [
+                  FilledButton.icon(
+                    onPressed: () => Speaker.speak(w.word, rate: 0.5),
+                    icon: const Icon(Icons.volume_up),
+                    label: const Text('Listen'),
+                  ),
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    onPressed: () => Speaker.speak(w.word, rate: 0.25),
+                    icon: const Icon(Icons.slow_motion_video),
+                    label: const Text('Slow'),
+                  ),
+                ],
+              ),
             const SizedBox(height: 24),
             if (w.glossId != null && w.glossId!.isNotEmpty) ...[
               const Text('Arti (Bahasa Indonesia)',
@@ -501,11 +512,12 @@ class _DetailPageState extends State<DetailPage> {
                       height: 1.4,
                       fontStyle: FontStyle.italic)),
               const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: () => Speaker.speak(w.example!, rate: 0.5),
-                icon: const Icon(Icons.volume_up),
-                label: const Text('Listen to example'),
-              ),
+              if (Speaker.supported)
+                OutlinedButton.icon(
+                  onPressed: () => Speaker.speak(w.example!, rate: 0.5),
+                  icon: const Icon(Icons.volume_up),
+                  label: const Text('Listen to example'),
+                ),
             ],
             if (w.synonyms != null && w.synonyms!.isNotEmpty) ...[
               const SizedBox(height: 24),
