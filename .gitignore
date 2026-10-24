@@ -27,6 +27,9 @@ app/assets/kamus_v24.sqlite
 *.apk
 *.aab
 
+# Release signing material (NEVER commit)
+signing/
+
 # Misc
 .DS_Store
 .idea/

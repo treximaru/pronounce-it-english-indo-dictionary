@@ -135,7 +135,6 @@ and database access via `sqflite`.
 
 - Cloud TTS with a UK voice via a caching backend (the concept's hybrid
   audio stage 2) — device TTS remains the offline fallback
-- Proper release signing keystore (current builds are debug-signed)
 - More Indonesian gloss coverage if a suitable open source appears
 
 ## Credits & license
