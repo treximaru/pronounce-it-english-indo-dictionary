@@ -166,8 +166,7 @@ class KamusDb {
 // ---------- TTS ----------
 
 class Speaker {
-  // flutter_tts has no Linux implementation: hide the buttons there.
-  static bool get supported => !Platform.isLinux;
+  // Linux has no flutter_tts implementation: speak() falls back to espeak-ng.
   static final FlutterTts _tts = FlutterTts();
   static bool _ready = false;
 
@@ -179,7 +178,22 @@ class Speaker {
   }
 
   static Future<void> speak(String text, {required double rate}) async {
-    if (!supported) return;
+    if (Platform.isLinux) {
+      // flutter_tts does not support Linux: use espeak-ng instead.
+      // Rate 0.5 -> ~88 wpm, 0.25 -> ~44 wpm (base 175 wpm).
+      try {
+        await Process.run('espeak-ng', [
+          '-v',
+          'en-gb',
+          '-s',
+          (rate * 175).round().toString(),
+          text,
+        ]);
+      } catch (_) {
+        // espeak-ng missing: stay silent, never crash.
+      }
+      return;
+    }
     await _init();
     await _tts.stop();
     await _tts.setSpeechRate(rate);
@@ -187,7 +201,8 @@ class Speaker {
   }
 
   static Future<void> stop() async {
-    if (!supported) return;
+    // Process.run has no persistent process to stop on Linux.
+    if (Platform.isLinux) return;
     await _tts.stop();
   }
 }
@@ -474,22 +489,21 @@ class _DetailPageState extends State<DetailPage> {
                     style: const TextStyle(color: Colors.grey)),
               ),
             const SizedBox(height: 20),
-            if (Speaker.supported)
-              Row(
-                children: [
-                  FilledButton.icon(
-                    onPressed: () => Speaker.speak(w.word, rate: 0.5),
-                    icon: const Icon(Icons.volume_up),
-                    label: const Text('Listen'),
-                  ),
-                  const SizedBox(width: 8),
-                  OutlinedButton.icon(
-                    onPressed: () => Speaker.speak(w.word, rate: 0.25),
-                    icon: const Icon(Icons.slow_motion_video),
-                    label: const Text('Slow'),
-                  ),
-                ],
-              ),
+            Row(
+              children: [
+                FilledButton.icon(
+                  onPressed: () => Speaker.speak(w.word, rate: 0.5),
+                  icon: const Icon(Icons.volume_up),
+                  label: const Text('Listen'),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton.icon(
+                  onPressed: () => Speaker.speak(w.word, rate: 0.25),
+                  icon: const Icon(Icons.slow_motion_video),
+                  label: const Text('Slow'),
+                ),
+              ],
+            ),
             const SizedBox(height: 24),
             if (w.glossId != null && w.glossId!.isNotEmpty) ...[
               const Text('Arti (Bahasa Indonesia)',
@@ -515,12 +529,11 @@ class _DetailPageState extends State<DetailPage> {
                       height: 1.4,
                       fontStyle: FontStyle.italic)),
               const SizedBox(height: 12),
-              if (Speaker.supported)
-                OutlinedButton.icon(
-                  onPressed: () => Speaker.speak(w.example!, rate: 0.5),
-                  icon: const Icon(Icons.volume_up),
-                  label: const Text('Listen to example'),
-                ),
+              OutlinedButton.icon(
+                onPressed: () => Speaker.speak(w.example!, rate: 0.5),
+                icon: const Icon(Icons.volume_up),
+                label: const Text('Listen to example'),
+              ),
             ],
             if (w.synonyms != null && w.synonyms!.isNotEmpty) ...[
               const SizedBox(height: 24),
