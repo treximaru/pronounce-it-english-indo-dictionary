@@ -200,3 +200,8 @@ gh auth login berhasil (akun treximaru, device code F7D4-BDD5 disetujui user). R
 - Hasil terukur JUJUR: terisi 361 kata saja -> cakupan suku kata/stress 33.730/91.556 (36,8%, naik 0,4pp). Sebabnya struktural: 58.187 kata tanpa suku kata mayoritas kata langka/long-tail Wiktionary, sedangkan Britfone memang daftar top-frequency (hampir semua isinya sudah ter-cover CMU). Nilai unik Britfone terkonfirmasi: ejaan British (favourite, honour, neighbourhood) + kata modern (google, twitter, podcast, upload, anime, remix) — titik buta CMU (Amerika). Contoh isi benar: google guː·gəl (1), upload ɐ·pləʊd (1), mumbai mʊm·baɪ (2).
 - Dataset kamus_v24.sqlite (36.585.472 B); app diarahkan ke v24 (KamusDb + pubspec + aset). ipa-dict TIDAK dipakai (sesuai evaluasi: en_UK turunan GPL-3.0 + tumpang tindih Kaikki).
 - Build APK v1.3.0 masih terblokir env VM (Gradle) — menunggu keputusan owner: build di batam vs tunggu instance pulih.
+
+## PEKERJAAN 16 — Build v1.3.0 di void + rilis (2026-10-24)
+- Toolchain void (~/muse/tools/): JDK Temurin 17.0.21, Android SDK (platform 36, build-tools 35.0.0 + 36.0.0 auto-install AGP, platform-tools, cmdline-tools, NDK 28.2.13676358), Flutter 3.47.7. Dua bug installer diperbaiki (urutan rakit chunk paralel; parser repository XML) + dua seed paralel (Gradle 9.3.1-all, NDK r28c) karena unduhan satu aliran di void kena throttle ±46 KB/s.
+- Build release arm64 SUKSES: PronounceIt-v27-arm64.apk, 33.540.033 B, md5 2453f0b09f1aebf7ec437c6c6f203f84, SHA256 98abc6b622293bc71ff913d3652fde9e377ee6cc12c4a66e43b21cc73264aa50. versionName 1.3.0-beta (code 8); DB terbundel md5 ecd058b9… identik kamus_v24.
+- GitHub pre-release v1.3.0-beta terbit dengan APK terlampir.

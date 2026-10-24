@@ -13,7 +13,7 @@ example — all without an internet connection for the dictionary data.
 >
 > Developed by **Muhammad Abdul Aziz, S.Pd**
 
-Current release: **1.2.0-beta** (Android, arm64)
+Current release: **1.3.0-beta** (Android, arm64)
 
 ---
 
@@ -26,6 +26,9 @@ Current release: **1.2.0-beta** (Android, arm64)
   highlighted
 - **Indonesian meanings** for 22,369 words (24.4%), shown before the English
   definition
+- **Synonyms & antonyms** at the bottom of each word page — synonyms in
+  green, antonyms in red, each a tappable chip that jumps to that word
+  (33,056 words with synonyms, 7,993 with antonyms)
 - **Listen / Slow / example audio** using the device's built-in TTS (en-GB)
 - **Keyboard always ready** — the search field autofocuses on open, after
   returning from a word, and after clearing
@@ -75,8 +78,8 @@ mv kaikki.org-dictionary-English.jsonl data/kaikki-en.jsonl
 
 Coverage of the final dataset: 91,556 words; IPA UK 36,725 (40.1%),
 any-IPA 100%; example sentences 61,138; Indonesian glosses 22,369 (24.4%);
-synonyms 33,056 (36.1%); antonyms 7,993 (8.7%); syllables & stress 33,730 (36.8%, incl. 361 British fills from Britfone, MIT)
-syllable/stress 33,369.
+synonyms 33,056 (36.1%); antonyms 7,993 (8.7%); syllables & stress 33,730
+(36.8%, incl. 361 British fills from Britfone, MIT).
 
 > Note: an Indonesian-Wiktionary route for extra glosses was tried and is a
 > dead end — its Kaikki dump contains only Indonesian headwords, no English
@@ -114,7 +117,7 @@ and database access via `sqflite`.
 ├── data/                <- generated datasets (git-ignored, see pipeline)
 └── app/                 <- Flutter application
     ├── lib/main.dart
-    ├── assets/          <- kamus_v23.sqlite goes here (git-ignored)
+    ├── assets/          <- kamus_v24.sqlite goes here (git-ignored)
     └── android/
 ```
 
@@ -126,6 +129,7 @@ and database access via `sqflite`.
 | 2.0 (app v2) | 2026-10-23 | 91,556 words from Wiktionary; UK IPA added; renamed to *Pronounce It!* |
 | 1.2.0 | 2026-10-23 | Single UK-first IPA display, Arti section, clear button, About page; +11,453 Indonesian glosses from WordNet Bahasa (24.4% total) |
 | 1.2.0-beta | 2026-10-23 | Keyboard autofocus everywhere, bold header title, About reordered (Four Pillars bold italic, Developed by at the bottom) |
+| 1.3.0-beta | 2026-10-24 | Synonyms (green) & antonyms (red) sections with tappable chips; dataset v24 (Britfone syllable/stress fills); About shows month + year; built on the void build server |
 
 ## Roadmap
 
