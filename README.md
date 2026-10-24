@@ -141,6 +141,7 @@ key, so new versions install directly over the previous one.
 | 1.2.0-beta | 2026-10-23 | Keyboard autofocus everywhere, bold header title, About reordered (Four Pillars bold italic, Developed by at the bottom) |
 | 1.3.0-beta | 2026-10-24 | Synonyms (green) & antonyms (red) sections with tappable chips; dataset v24 (Britfone syllable/stress fills); About shows month + year; built on the void build server; later that day: rebuilt with permanent release signing + search-order fix (exact match always first) |
 | 1.4.0-beta | 2026-10-24 | Light / Dark / Follow-system theme (saved across restarts); word page & chips made dark-mode safe |
+| 1.5.0-beta | 2026-10-24 | Dataset v25: archaic examples filtered (pre-1700 refs replaced with modern ones where available); common-sense definitions for 56 function words |
 
 ## Roadmap
 
