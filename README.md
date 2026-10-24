@@ -13,7 +13,7 @@ example — all without an internet connection for the dictionary data.
 >
 > Developed by **Muhammad Abdul Aziz, S.Pd**
 
-Current release: **1.3.0-beta** (Android, arm64)
+Current release: **1.5.0-beta** (Android, arm64)
 
 ---
 
