@@ -91,12 +91,15 @@ class KamusDb {
     final q = query.trim().toLowerCase();
     final List<Map<String, Object?>> rows;
     if (q.isEmpty) {
-      rows = await db.query('words', orderBy: 'freq_rank ASC', limit: 100);
+      rows = await db.query('words',
+          orderBy: '(freq_rank IS NULL) ASC, freq_rank ASC, word ASC',
+          limit: 100);
     } else {
       rows = await db.rawQuery(
         'SELECT * FROM words WHERE word LIKE ? '
-        'ORDER BY (word LIKE ?) DESC, freq_rank ASC LIMIT 100',
-        ['%$q%', '$q%'],
+        'ORDER BY (LOWER(word) = ?) DESC, (word LIKE ?) DESC, '
+        '(freq_rank IS NULL) ASC, freq_rank ASC, word ASC LIMIT 100',
+        ['%$q%', q, '$q%'],
       );
     }
     return rows.map(WordEntry.fromMap).toList();
