@@ -32,7 +32,8 @@ Current release: **1.3.0-beta** (Android, arm64)
 - **Listen / Slow / example audio** using the device's built-in TTS (en-GB)
 - **Keyboard always ready** — the search field autofocuses on open, after
   returning from a word, and after clearing
-- Fast prefix-first search with a one-tap clear (✕) button
+- Fast search — the exact word you type always comes first, then prefix
+  matches by frequency — with a one-tap clear (✕) button
 - No accounts, no ads, no tracking; dictionary data never leaves the phone
 
 ## Data sources (all open)
@@ -99,9 +100,16 @@ flutter build apk --release --split-per-abi
 ```
 
 The app (`app/lib/main.dart`, single-file) copies the bundled SQLite asset to
-app storage on first run under a versioned filename, searches with a
-prefix-first query, and renders the detail page with TTS via `flutter_tts`
-and database access via `sqflite`.
+app storage on first run under a versioned filename, searches with an
+exact-match-first, prefix-then-frequency query, and renders the detail page
+with TTS via `flutter_tts` and database access via `sqflite`.
+
+**Signing:** official builds are signed with the project's permanent release
+keystore, wired in `app/android/app/build.gradle.kts` through
+`app/android/key.properties` (the keystore and that file are kept outside git
+— never commit them). Without `key.properties`, a build falls back to the
+debug key. Since the 2026-10-24 rebuild, all release APKs use the permanent
+key, so new versions install directly over the previous one.
 
 ## Project structure
 
@@ -129,7 +137,7 @@ and database access via `sqflite`.
 | 2.0 (app v2) | 2026-10-23 | 91,556 words from Wiktionary; UK IPA added; renamed to *Pronounce It!* |
 | 1.2.0 | 2026-10-23 | Single UK-first IPA display, Arti section, clear button, About page; +11,453 Indonesian glosses from WordNet Bahasa (24.4% total) |
 | 1.2.0-beta | 2026-10-23 | Keyboard autofocus everywhere, bold header title, About reordered (Four Pillars bold italic, Developed by at the bottom) |
-| 1.3.0-beta | 2026-10-24 | Synonyms (green) & antonyms (red) sections with tappable chips; dataset v24 (Britfone syllable/stress fills); About shows month + year; built on the void build server |
+| 1.3.0-beta | 2026-10-24 | Synonyms (green) & antonyms (red) sections with tappable chips; dataset v24 (Britfone syllable/stress fills); About shows month + year; built on the void build server; later that day: rebuilt with permanent release signing + search-order fix (exact match always first) |
 
 ## Roadmap
 
