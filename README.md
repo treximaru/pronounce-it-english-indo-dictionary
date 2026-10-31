@@ -13,7 +13,7 @@ example — all without an internet connection for the dictionary data.
 >
 > Developed by **Muhammad Abdul Aziz, S.Pd**
 
-Current release: **1.7.0-beta** (Android, arm64)
+Current release: **1.7.1-beta** (Android, arm64)
 
 ---
 
@@ -24,8 +24,15 @@ Current release: **1.7.0-beta** (Android, arm64)
   so accents never get mixed up or silently swapped
 - **Syllable + stress display** (from CMUdict) with the stressed syllable
   highlighted
-- **Indonesian meanings** for 22,369 words (24.4%), shown before the English
+- **Indonesian meanings** for 29,050 words (31.7%), shown before the English
   definition
+- **Typo-tolerant search** — misspellings still find the word
+  (*aproxima* → *approximately*)
+- **Verb forms** — V1/V2/V3 cards for verbs (*go* → *went* → *gone*),
+  tappable, with reverse links (*went* shows "past tense of *go*")
+- **Parts of speech** — shown most-common-first (*run* → verb · noun ·
+  adjective); ultra-rare/archaic categories are filtered out (*in* no
+  longer claims to be a verb)
 - **Synonyms & antonyms** at the bottom of each word page — synonyms in
   green, antonyms in red, each a tappable chip that jumps to that word
   (33,056 words with synonyms, 7,993 with antonyms)
@@ -144,6 +151,7 @@ key, so new versions install directly over the previous one.
 | 1.5.0-beta | 2026-10-24 | Dataset v25: archaic examples filtered (pre-1700 refs replaced with modern ones where available); common-sense definitions for 56 function words |
 | 1.6.0-beta | 2026-10-24 | Dataset v26: Indonesian gloss 29,050/91,556 words (31.73%, up from 24.43%) — manual wordlist complete (1,121), FreeDict, filtered OPUS alignment, validated OPUS-MT only |
 | 1.7.0-beta | 2026-10-31 | Typo-tolerant search (*aproxima*→*approximately*); verb V1/V2/V3 cards with reverse links (*went* = past of *go*); all parts of speech shown (*run* → verb · noun · adjective, from Wiktionary). Dataset v27 (pos_all column) |
+| 1.7.1-beta | 2026-10-31 | Parts of speech refined: only categories with real currency are shown (filtered by Wiktionary sense count), ordered most-common-first — *in* → preposition · adjective · adverb. Dataset v28 |
 
 ## Roadmap
 
