@@ -13,7 +13,7 @@ example — all without an internet connection for the dictionary data.
 >
 > Developed by **Muhammad Abdul Aziz, S.Pd**
 
-Current release: **1.6.0-beta** (Android, arm64)
+Current release: **1.7.0-beta** (Android, arm64)
 
 ---
 
@@ -143,6 +143,7 @@ key, so new versions install directly over the previous one.
 | 1.4.0-beta | 2026-10-24 | Light / Dark / Follow-system theme (saved across restarts); word page & chips made dark-mode safe |
 | 1.5.0-beta | 2026-10-24 | Dataset v25: archaic examples filtered (pre-1700 refs replaced with modern ones where available); common-sense definitions for 56 function words |
 | 1.6.0-beta | 2026-10-24 | Dataset v26: Indonesian gloss 29,050/91,556 words (31.73%, up from 24.43%) — manual wordlist complete (1,121), FreeDict, filtered OPUS alignment, validated OPUS-MT only |
+| 1.7.0-beta | 2026-10-31 | Typo-tolerant search (*aproxima*→*approximately*); verb V1/V2/V3 cards with reverse links (*went* = past of *go*); all parts of speech shown (*run* → verb · noun · adjective, from Wiktionary). Dataset v27 (pos_all column) |
 
 ## Roadmap
 
