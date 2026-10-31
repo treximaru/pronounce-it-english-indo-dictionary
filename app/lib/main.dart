@@ -343,9 +343,9 @@ class KamusDb {
     if (_db != null) return _db!;
     final dbDir = await getDatabasesPath();
     // Versioned filename so a future dataset update is not shadowed by a stale copy.
-    final path = p.join(dbDir, 'kamus_v27.sqlite');
+    final path = p.join(dbDir, 'kamus_v28.sqlite');
     if (!await File(path).exists()) {
-      final data = await rootBundle.load('assets/kamus_v27.sqlite');
+      final data = await rootBundle.load('assets/kamus_v28.sqlite');
       final bytes =
           data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
       await File(path).writeAsBytes(bytes, flush: true);
@@ -1215,7 +1215,7 @@ class AboutPage extends StatelessWidget {
             const Text('English Dictionary: Pronounce It!',
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
-            const Text('Version 1.7.0 - beta · October 2026',
+            const Text('Version 1.7.1 - beta · October 2026',
                 style: TextStyle(color: Colors.grey)),
             const SizedBox(height: 24),
             const Text(
