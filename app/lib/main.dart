@@ -343,9 +343,9 @@ class KamusDb {
     if (_db != null) return _db!;
     final dbDir = await getDatabasesPath();
     // Versioned filename so a future dataset update is not shadowed by a stale copy.
-    final path = p.join(dbDir, 'kamus_v28.sqlite');
+    final path = p.join(dbDir, 'kamus_v29.sqlite');
     if (!await File(path).exists()) {
-      final data = await rootBundle.load('assets/kamus_v28.sqlite');
+      final data = await rootBundle.load('assets/kamus_v29.sqlite');
       final bytes =
           data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
       await File(path).writeAsBytes(bytes, flush: true);
